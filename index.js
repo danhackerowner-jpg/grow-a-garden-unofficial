@@ -4,7 +4,7 @@ const axios = require("axios");
 const { createClient } = require("@supabase/supabase-js");
 
 // --- Facebook Hardcoded ---
-const PAGE_ACCESS_TOKEN = "YOUR_PAGE_ACCESS_TOKEN";
+const PAGE_ACCESS_TOKEN = "EAANWqh0HAoMBPadfArroTb09GmkDJQcUITZCMAOXx2Gb1CRPEPVFEg2qJSfieOkWmdGuM4SQkbPmNDpWvLjdecGEUHtZBCfT0mhb23RHsZC0XVSYkOnN0BDseGmAymPqL3zEJDFe3ZCMQAhzXCFNnNSGOMZAMbG9E1ZANjLqHHqeSV7IVy2zeOqMIfCS7ZBImOzuekCZAPpgkwZDZD";
 const VERIFY_TOKEN = "key";
 
 // --- Supabase ---
