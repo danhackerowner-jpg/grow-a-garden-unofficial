@@ -8,7 +8,7 @@ const PAGE_ACCESS_TOKEN = "YOUR_PAGE_ACCESS_TOKEN";
 const VERIFY_TOKEN = "key";
 
 // --- Supabase ---
-const supabase = createClient("https://YOUR-PROJECT.supabase.co", "YOUR-ANON-KEY");
+const supabase = https://qogyeullicyprlcmgvcu.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvZ3lldWxsaWN5cHJsY21ndmN1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc4MDczODIsImV4cCI6MjA3MzM4MzM4Mn0.x8L6Tp7yC2jcUDg_19JyFy_qfBEnq5tWxJi_tW4muOk;
 
 // --- Express ---
 const app = express().use(bodyParser.json());
