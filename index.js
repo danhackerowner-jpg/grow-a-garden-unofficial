@@ -52,51 +52,35 @@ async function broadcast(msg) {
   }
 }
 
-// --- Shops ---
-const seeds = [
-  { id: 1, emoji: "🌱", name: "Carrot", cost: 10, growTime: 1 },
-  { id: 2, emoji: "🍎", name: "Apple", cost: 20, growTime: 2 },
-  { id: 3, emoji: "🍇", name: "Grape", cost: 30, growTime: 3 },
-  { id: 4, emoji: "🥔", name: "Potato", cost: 15, growTime: 2 },
-];
-
-const eggs = [
-  { id: 1, emoji: "🥚", name: "Chicken Egg", cost: 50, hatchTime: 2 },
-  { id: 2, emoji: "🦆", name: "Duck Egg", cost: 80, hatchTime: 3 },
-  { id: 3, emoji: "🦉", name: "Owl Egg", cost: 100, hatchTime: 4 },
-];
-
 // --- Command Handler ---
 async function handleCommand(psid, text) {
   let user = await getUser(psid);
+  const args = text.trim().split(" ");
+  const command = args[0]?.toLowerCase();
 
+  // Force join first
   if (!user) {
-    if (!text.startsWith("/join")) {
-      return sendMessage(
-        psid,
-        "Please enter your username by typing /join (username)"
-      );
+    if (command !== "/join") {
+      return sendMessage(psid, "❌ You must join first. Use: /join <username>");
     }
   }
 
-  const args = text.split(" ");
-  const command = args[0].toLowerCase();
-
-  // --- JOIN ---
+  // --- Join Command ---
   if (command === "/join") {
     const username = args[1];
-    if (!username) return sendMessage(psid, "Usage: /join (username)");
+    if (!username) return sendMessage(psid, "Usage: /join <username>");
     if (username.includes(" "))
-      return sendMessage(psid, "Username cannot have spaces.");
+      return sendMessage(psid, "❌ Username cannot contain spaces.");
 
     const { data: exists } = await supabase
       .from("users")
       .select("*")
       .eq("username", username)
       .maybeSingle();
-    if (exists) return sendMessage(psid, "That username is already taken.");
 
-    const newUser = {
+    if (exists) return sendMessage(psid, "⚠️ That username is already taken.");
+
+    user = {
       psid,
       username,
       role: 1,
@@ -106,21 +90,37 @@ async function handleCommand(psid, text) {
       garden: [],
       pets: [],
     };
-    await saveUser(newUser);
-
-    // ✅ Fix: set user in memory
-    user = newUser;
-
+    await saveUser(user);
     return sendMessage(psid, `✅ Welcome ${username}! You joined the garden.`);
   }
 
-  if (!user) return;
+  if (!user) return; // safety
 
-  // --- USER COMMANDS ---
+  // --- Normal Commands ---
   if (command === "/help") {
     return sendMessage(
       psid,
-      "📜 Commands:\n/help\n/id\n/bal\n/seedshop\n/eggshop\n/garden\n/fence\n/plant\n/harvest\n/hatch\n/sell\n\n🔑 Admin:\n/accessadmin (pw)\n/ban\n/unban\n/setcoin\n/announce\n/globalchat\n/startevent"
+      `📜 Commands:
+      /help - Show this list
+      /id - Show your PSID
+      /bal - Show your coin balance
+      /seedshop - View seeds available
+      /eggshop - View eggs available
+      /garden - View your planted seeds
+      /fence - View your pets
+      /plant <seed> - Plant a seed
+      /harvest <seed> - Harvest crops
+      /hatch <egg> - Hatch an egg
+      /sell <item> - Sell crops/pets
+
+🔑 Admin:
+      /accessadmin <pw>
+      /ban <username>
+      /unban <username>
+      /setcoin <username> <amount>
+      /announce <msg>
+      /globalchat <msg>
+      /startevent <eventname>`
     );
   }
 
@@ -131,40 +131,78 @@ async function handleCommand(psid, text) {
     return sendMessage(psid, `💰 Balance: ${user.coins} coins`);
 
   if (command === "/seedshop") {
-    let msg = "🌱 Seed Shop:\n";
-    for (let s of seeds) {
-      msg += `${s.id}. ${s.emoji} ${s.name} - ${s.cost} coins\n`;
-    }
-    return sendMessage(psid, msg);
+    return sendMessage(
+      psid,
+      "🌱 Seed Shop:\n- Apple Seed (10c)\n- Banana Seed (15c)\n- Carrot Seed (20c)\n- Mango Seed (25c)\n- Strawberry Seed (30c)"
+    );
   }
 
   if (command === "/eggshop") {
-    let msg = "🥚 Egg Shop:\n";
-    for (let e of eggs) {
-      msg += `${e.id}. ${e.emoji} ${e.name} - ${e.cost} coins\n`;
-    }
-    return sendMessage(psid, msg);
+    return sendMessage(
+      psid,
+      "🥚 Egg Shop:\n- Chicken Egg (50c)\n- Duck Egg (75c)\n- Dragon Egg (200c)"
+    );
   }
 
   if (command === "/garden") {
-    if (!user.garden.length) return sendMessage(psid, "🌱 Your garden is empty.");
-    let msg = "🌱 Your Garden:\n";
-    user.garden.forEach((p, i) => {
-      msg += `${i + 1}. ${p.emoji} ${p.name} (Stage: ${p.stage}/${p.growTime})\n`;
-    });
-    return sendMessage(psid, msg);
+    return sendMessage(
+      psid,
+      user.garden.length > 0
+        ? `🌱 Your Garden: ${user.garden.join(", ")}`
+        : "🌱 Your garden is empty."
+    );
   }
 
   if (command === "/fence") {
-    if (!user.pets.length) return sendMessage(psid, "🐾 Your fence has no pets.");
-    let msg = "🐾 Your Fence:\n";
-    user.pets.forEach((p, i) => {
-      msg += `${i + 1}. ${p.emoji} ${p.name} (Hatched)\n`;
-    });
-    return sendMessage(psid, msg);
+    return sendMessage(
+      psid,
+      user.pets.length > 0
+        ? `🐾 Your Fence: ${user.pets.join(", ")}`
+        : "🐾 Your fence has no pets."
+    );
   }
 
-  // --- ADMIN ACCESS ---
+  if (command === "/plant") {
+    const seed = args[1];
+    if (!seed) return sendMessage(psid, "Usage: /plant <seed>");
+    user.garden.push(seed);
+    await saveUser(user);
+    return sendMessage(psid, `🌱 You planted a ${seed}.`);
+  }
+
+  if (command === "/harvest") {
+    const seed = args[1];
+    if (!seed) return sendMessage(psid, "Usage: /harvest <seed>");
+    if (!user.garden.includes(seed))
+      return sendMessage(psid, `❌ You don’t have ${seed} planted.`);
+    user.garden = user.garden.filter((s) => s !== seed);
+    user.inventory.push(`${seed} crop`);
+    await saveUser(user);
+    return sendMessage(psid, `✅ You harvested ${seed}.`);
+  }
+
+  if (command === "/hatch") {
+    const egg = args[1];
+    if (!egg) return sendMessage(psid, "Usage: /hatch <egg>");
+    user.pets.push(`${egg} pet`);
+    await saveUser(user);
+    return sendMessage(psid, `🐣 Your ${egg} hatched into a pet!`);
+  }
+
+  if (command === "/sell") {
+    const item = args.slice(1).join(" ");
+    if (!item) return sendMessage(psid, "Usage: /sell <item>");
+    if (!user.inventory.includes(item) && !user.pets.includes(item))
+      return sendMessage(psid, `❌ You don’t have ${item}.`);
+
+    user.inventory = user.inventory.filter((i) => i !== item);
+    user.pets = user.pets.filter((i) => i !== item);
+    user.coins += 20;
+    await saveUser(user);
+    return sendMessage(psid, `💰 You sold ${item} for 20 coins.`);
+  }
+
+  // --- Admin Access ---
   if (command === "/accessadmin") {
     if (args[1] === "danielot") {
       user.role = 2;
@@ -174,46 +212,52 @@ async function handleCommand(psid, text) {
     return sendMessage(psid, "❌ Wrong password.");
   }
 
-  // --- ADMIN ONLY ---
+  // --- Admin Only Commands ---
   if (user.role === 2) {
-    if (command === "/announce") {
-      const msg = args.slice(1).join(" ");
-      if (!msg) return sendMessage(psid, "Usage: /announce (message)");
-      return broadcast(`📢 ANNOUNCEMENT from ${user.username}: ${msg}`);
-    }
-
     if (command === "/ban") {
       const target = args[1];
-      if (!target) return sendMessage(psid, "Usage: /ban (username)");
+      if (!target) return sendMessage(psid, "Usage: /ban <username>");
       await supabase.from("users").update({ banned: true }).eq("username", target);
-      return sendMessage(psid, `🚫 Banned ${target}`);
+      return sendMessage(psid, `🚫 User ${target} has been banned.`);
     }
 
     if (command === "/unban") {
       const target = args[1];
-      if (!target) return sendMessage(psid, "Usage: /unban (username)");
+      if (!target) return sendMessage(psid, "Usage: /unban <username>");
       await supabase.from("users").update({ banned: false }).eq("username", target);
-      return sendMessage(psid, `✅ Unbanned ${target}`);
+      return sendMessage(psid, `✅ User ${target} has been unbanned.`);
     }
 
     if (command === "/setcoin") {
       const target = args[1];
       const amount = parseInt(args[2]);
-      if (!target || isNaN(amount)) return sendMessage(psid, "Usage: /setcoin (username) (amount)");
+      if (!target || isNaN(amount))
+        return sendMessage(psid, "Usage: /setcoin <username> <amount>");
       await supabase.from("users").update({ coins: amount }).eq("username", target);
-      return sendMessage(psid, `💰 Set ${target}'s coins to ${amount}`);
+      return sendMessage(psid, `💰 Set ${target}'s coins to ${amount}.`);
+    }
+
+    if (command === "/announce") {
+      const msg = args.slice(1).join(" ");
+      if (!msg) return sendMessage(psid, "Usage: /announce <message>");
+      return broadcast(`📢 ANNOUNCEMENT from ${user.username}: ${msg}`);
     }
 
     if (command === "/globalchat") {
       const msg = args.slice(1).join(" ");
-      if (!msg) return sendMessage(psid, "Usage: /globalchat (message)");
-      return broadcast(`🌍 ${user.username}✓: ${msg}`);
+      if (!msg) return sendMessage(psid, "Usage: /globalchat <message>");
+      return broadcast(`💬 ${user.username}: ${msg}`);
     }
 
     if (command === "/startevent") {
-      return broadcast("🎉 Event started! Answer quick questions to win coins soon!");
+      const eventName = args[1];
+      if (!eventName) return sendMessage(psid, "Usage: /startevent <event>");
+      return broadcast(`🎉 Event started: ${eventName}!`);
     }
   }
+
+  // --- Unknown Command ---
+  return sendMessage(psid, "❓ Unknown command. Type /help for commands.");
 }
 
 // --- Webhook ---
@@ -241,4 +285,4 @@ app.get("/webhook", (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Bot running on port ${PORT}`));
-    
+  
