@@ -1,16 +1,14 @@
 {
-  "name": "grow-a-garden-bot",
+  "name": "garden-bot",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT",
-  "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.1",
-    "axios": "^1.7.2",
+    "axios": "^1.6.0",
     "body-parser": "^1.20.2",
-    "express": "^4.19.2"
+    "express": "^4.18.2",
+    "@supabase/supabase-js": "^2.42.0"
   }
 }
